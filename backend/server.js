@@ -8,13 +8,13 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Create uploads directory if it doesn't exist
+
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// CORS configuration
+
 app.use(cors({
   origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:52178'],
   credentials: true,
@@ -24,18 +24,18 @@ app.use(cors({
 
 app.use(express.json());
 
-// Serve static files from the uploads directory with proper MIME types
+
 app.use('/uploads', express.static(uploadsDir, {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
       res.setHeader('Content-Type', 'image/jpeg');
-    } else if (path.endsWith('.png')) {
+    } else if (filePath.endsWith('.png')) {
       res.setHeader('Content-Type', 'image/png');
     }
   }
 }));
 
-// Import routes
+
 const houseRouter = require('./routes/house.routes');
 const userRouter = require('./routes/auth.routes');
 const bookingRouter = require('./routes/booking.routes');
@@ -44,28 +44,33 @@ app.use('/api/houses', houseRouter);
 app.use('/api/auth', userRouter);
 app.use('/api', bookingRouter);
 
-// Error handling middleware
+
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err.stack);
   res.status(500).json({ message: 'Something went wrong!', error: err.message });
 });
 
-// MongoDB connection
-const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/house-rental';
-console.log('Attempting to connect to MongoDB at:', uri);
+// MongoDB Atlas Connection
+const atlasUri = process.env.MONGO_URI; 
 
-mongoose.connect(uri, {
+if (!atlasUri) {
+  console.error("❌ ERROR: MONGO_URI is missing in .env file");
+  process.exit(1);
+}
+
+console.log("➡️ Attempting to connect to MongoDB Atlas...");
+
+mongoose.connect(atlasUri, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000
+  useUnifiedTopology: true
 })
 .then(() => {
-  console.log('MongoDB connection established successfully');
+  console.log("✅ MongoDB Atlas Connected Successfully");
   app.listen(port, () => {
-    console.log(`Server is running on port: ${port}`);
+    console.log(`🚀 Server running on port ${port}`);
   });
 })
 .catch(err => {
-  console.error('MongoDB connection error:', err);
+  console.error("❌ MongoDB Connection Error:", err);
   process.exit(1);
 });
